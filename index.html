@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Погода</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; }
+
+    body {
+        background: linear-gradient(160deg, #4a6fa5, #2c3e6b 60%, #1a2540);
+        min-height: 100vh;
+        color: #fff;
+        padding: 16px;
+    }
+
+    #app {
+        max-width: 480px;
+        margin: 0 auto;
+    }
+
+    #district-select {
+        width: 100%;
+        padding: 12px 16px;
+        border-radius: 12px;
+        border: none;
+        background: rgba(255,255,255,0.15);
+        color: #fff;
+        font-size: 15px;
+        outline: none;
+        margin-bottom: 16px;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+    #district-select option {
+        background: #2c3e6b;
+        color: #fff;
+    }
+
+    #main-card {
+        background: rgba(255,255,255,0.1);
+        border-radius: 24px;
+        padding: 28px 20px;
+        text-align: center;
+        backdrop-filter: blur(10px);
+        margin-bottom: 16px;
+    }
+
+    #city-name {
+        font-size: 22px;
+        font-weight: 600;
+    }
+
+    #region-name {
+        font-size: 13px;
+        color: rgba(255,255,255,0.65);
+        margin-bottom: 12px;
+    }
+
+    #weather-icon {
+        font-size: 64px;
+        margin: 8px 0;
+    }
+
+    #temp {
+        font-size: 56px;
+        font-weight: 300;
+    }
+
+    #feels-like {
+        font-size: 14px;
+        color: rgba(255,255,255,0.7);
+        margin-top: 2px;
+    }
+
+    #condition {
+        font-size: 17px;
+        margin-top: 8px;
+    }
+
+    #details-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .detail-box {
+        background: rgba(255,255,255,0.08);
+        border-radius: 14px;
+        padding: 12px 6px;
+    }
+    .detail-label {
+        font-size: 11px;
+        color: rgba(255,255,255,0.6);
+        margin-bottom: 4px;
+    }
+    .detail-value {
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    #hourly-section, #daily-section {
+        background: rgba(255,255,255,0.1);
+        border-radius: 20px;
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+
+    .section-title {
+        font-size: 14px;
+        color: rgba(255,255,255,0.7);
+        margin-bottom: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    #hourly-scroll {
+        display: flex;
+        gap: 14px;
+        overflow-x: auto;
+        padding-bottom: 4px;
+    }
+
+    .hour-item {
+        flex-shrink: 0;
+        text-align: center;
+        min-width: 52px;
+    }
+    .hour-time { font-size: 12px; color: rgba(255,255,255,0.6); }
+    .hour-icon { font-size: 22px; margin: 6px 0; }
+    .hour-temp { font-size: 14px; font-weight: 600; }
+
+    .day-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .day-row:last-child { border-bottom: none; }
+    .day-name { font-size: 14px; width: 90px; }
+    .day-icon { font-size: 20px; width: 30px; text-align: center; }
+    .day-temps { font-size: 14px; }
+    .day-temps .max { font-weight: 600; }
+    .day-temps .min { color: rgba(255,255,255,0.55); margin-left: 6px; }
+
+    #status-msg {
+        text-align: center;
+        color: rgba(255,255,255,0.7);
+        font-size: 14px;
+        padding: 20px;
+    }
+
+    #attribution {
+        text-align: center;
+        font-size: 11px;
+        color: rgba(255,255,255,0.4);
+        margin-top: 8px;
+    }
+
+    .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div id="app">
+    <select id="district-select" onchange="onDistrictChange()">
+        <option value="yaroslavl">Ярославль (Ярославский р-н)</option>
+        <option value="krasnoperekopsky">Красноперекопский район (Ярославль)</option>
+        <option value="bragino">Брагино (Дзержинский район, Ярославль)</option>
+        <option value="rybinsk">Рыбинск (Рыбинский р-н)</option>
+        <option value="pereslavl">Переславль-Залесский (Переславский р-н)</option>
+        <option value="rostov">Ростов (Ростовский р-н)</option>
+        <option value="tutaev">Тутаев (Тутаевский р-н)</option>
+        <option value="uglich">Углич (Угличский р-н)</option>
+        <option value="danilov">Данилов (Даниловский р-н)</option>
+        <option value="gavrilov_yam">Гаврилов-Ям (Гаврилов-Ямский р-н)</option>
+        <option value="myshkin">Мышкин (Мышкинский р-н)</option>
+        <option value="poshekhonye">Пошехонье (Пошехонский р-н)</option>
+        <option value="lyubim">Любим (Любимский р-н)</option>
+        <option value="nekrasovskoye">Некрасовское (Некрасовский р-н)</option>
+        <option value="bolshoye_selo">Большое Село (Большесельский р-н)</option>
+        <option value="borisoglebsky">Борисоглебский р-н</option>
+        <option value="breytovo">Брейтово (Брейтовский р-н)</option>
+        <option value="nekouz">Некоуз (Некоузский р-н)</option>
+        <option value="pervomaysky">Пречистое (Первомайский р-н)</option>
+    </select>
+
+    <div id="status-msg">Загрузка погоды для Ярославля...</div>
+
+    <div id="content" class="hidden">
+        <div id="main-card">
+            <div id="city-name">—</div>
+            <div id="region-name">—</div>
+            <div id="weather-icon">☀️</div>
+            <div id="temp">—°</div>
+            <div id="feels-like">Ощущается как —°</div>
+            <div id="condition">—</div>
+
+            <div id="details-grid">
+                <div class="detail-box">
+                    <div class="detail-label">Ветер</div>
+                    <div class="detail-value" id="wind">—</div>
+                </div>
+                <div class="detail-box">
+                    <div class="detail-label">Влажность</div>
+                    <div class="detail-value" id="humidity">—</div>
+                </div>
+                <div class="detail-box">
+                    <div class="detail-label">Давление</div>
+                    <div class="detail-value" id="pressure">—</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="hourly-section">
+            <div class="section-title">Почасовой прогноз</div>
+            <div id="hourly-scroll"></div>
+        </div>
+
+        <div id="daily-section">
+            <div class="section-title">На неделю</div>
+            <div id="daily-list"></div>
+        </div>
+
+        <div id="attribution">Данные: Open-Meteo.com</div>
+    </div>
+</div>
+
+<script>
+// Районные центры Ярославской области с координатами
+const DISTRICTS = {
+    yaroslavl:      { lat: 57.6261, lon: 39.8845, name: "Ярославль",              region: "Ярославский район" },
+    krasnoperekopsky: { lat: 57.6167, lon: 39.8264, name: "Красноперекопский район", region: "г. Ярославль" },
+    bragino:        { lat: 57.6474, lon: 39.7867, name: "Брагино",                region: "Дзержинский район, г. Ярославль" },
+    rybinsk:        { lat: 58.0500, lon: 38.8333, name: "Рыбинск",                region: "Рыбинский район" },
+    pereslavl:      { lat: 56.7333, lon: 38.8500, name: "Переславль-Залесский",   region: "Переславский район" },
+    rostov:         { lat: 57.1836, lon: 39.4198, name: "Ростов",                 region: "Ростовский район" },
+    tutaev:         { lat: 57.8686, lon: 39.5306, name: "Тутаев",                 region: "Тутаевский район" },
+    uglich:         { lat: 57.5292, lon: 38.3117, name: "Углич",                  region: "Угличский район" },
+    danilov:        { lat: 58.1928, lon: 40.1733, name: "Данилов",                region: "Даниловский район" },
+    gavrilov_yam:   { lat: 57.3011, lon: 39.8378, name: "Гаврилов-Ям",            region: "Гаврилов-Ямский район" },
+    myshkin:        { lat: 57.7864, lon: 38.4489, name: "Мышкин",                 region: "Мышкинский район" },
+    poshekhonye:    { lat: 58.5058, lon: 39.1272, name: "Пошехонье",              region: "Пошехонский район" },
+    lyubim:         { lat: 58.3667, lon: 40.6833, name: "Любим",                  region: "Любимский район" },
+    nekrasovskoye:  { lat: 57.7500, lon: 40.2500, name: "Некрасовское",           region: "Некрасовский район" },
+    bolshoye_selo:  { lat: 57.7833, lon: 39.1500, name: "Большое Село",           region: "Большесельский район" },
+    borisoglebsky:  { lat: 57.2667, lon: 39.1333, name: "Борисоглебский",         region: "Борисоглебский район" },
+    breytovo:       { lat: 58.2500, lon: 37.8667, name: "Брейтово",               region: "Брейтовский район" },
+    nekouz:         { lat: 57.9000, lon: 38.2833, name: "Некоуз",                 region: "Некоузский район" },
+    pervomaysky:    { lat: 58.0333, lon: 40.9500, name: "Пречистое",              region: "Первомайский район" }
+};
+
+// Коды погоды Open-Meteo (WMO) -> иконка + текст на русском
+const WEATHER_CODES = {
+    0: ["☀️", "Ясно"],
+    1: ["🌤️", "Малооблачно"],
+    2: ["⛅", "Переменная облачность"],
+    3: ["☁️", "Пасмурно"],
+    45: ["🌫️", "Туман"],
+    48: ["🌫️", "Изморозь"],
+    51: ["🌦️", "Лёгкая морось"],
+    53: ["🌦️", "Морось"],
+    55: ["🌧️", "Сильная морось"],
+    56: ["🌧️", "Ледяная морось"],
+    57: ["🌧️", "Сильная ледяная морось"],
+    61: ["🌦️", "Небольшой дождь"],
+    63: ["🌧️", "Дождь"],
+    65: ["🌧️", "Сильный дождь"],
+    66: ["🌧️", "Ледяной дождь"],
+    67: ["🌧️", "Сильный ледяной дождь"],
+    71: ["🌨️", "Небольшой снег"],
+    73: ["🌨️", "Снег"],
+    75: ["❄️", "Сильный снег"],
+    77: ["❄️", "Снежные зёрна"],
+    80: ["🌦️", "Небольшой ливень"],
+    81: ["🌧️", "Ливень"],
+    82: ["⛈️", "Сильный ливень"],
+    85: ["🌨️", "Небольшой снегопад"],
+    86: ["❄️", "Снегопад"],
+    95: ["⛈️", "Гроза"],
+    96: ["⛈️", "Гроза с градом"],
+    99: ["⛈️", "Сильная гроза с градом"]
+};
+
+function weatherInfo(code) {
+    return WEATHER_CODES[code] || ["🌡️", "Неизвестно"];
+}
+
+function setStatus(text) {
+    const el = document.getElementById('status-msg');
+    el.textContent = text;
+    el.classList.remove('hidden');
+    document.getElementById('content').classList.add('hidden');
+}
+
+function showContent() {
+    document.getElementById('status-msg').classList.add('hidden');
+    document.getElementById('content').classList.remove('hidden');
+}
+
+async function fetchWeather(lat, lon, displayName, displayRegion) {
+    setStatus(`Загружаем погоду для ${displayName}...`);
+    try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+            `&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,surface_pressure` +
+            `&hourly=temperature_2m,weather_code` +
+            `&daily=weather_code,temperature_2m_max,temperature_2m_min` +
+            `&timezone=auto&forecast_days=7`;
+
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Ошибка запроса погоды');
+        const data = await res.json();
+
+        renderCurrent(data, displayName, displayRegion);
+        renderHourly(data);
+        renderDaily(data);
+        showContent();
+    } catch (err) {
+        console.error(err);
+        setStatus('Не удалось загрузить погоду 😔 Проверь интернет-соединение и попробуй снова.');
+    }
+}
+
+function renderCurrent(data, name, region) {
+    const c = data.current;
+    const [icon, text] = weatherInfo(c.weather_code);
+
+    document.getElementById('city-name').textContent = name;
+    document.getElementById('region-name').textContent = region || '';
+    document.getElementById('weather-icon').textContent = icon;
+    document.getElementById('temp').textContent = Math.round(c.temperature_2m) + '°';
+    document.getElementById('feels-like').textContent = `Ощущается как ${Math.round(c.apparent_temperature)}°`;
+    document.getElementById('condition').textContent = text;
+    document.getElementById('wind').textContent = Math.round(c.wind_speed_10m) + ' км/ч';
+    document.getElementById('humidity').textContent = c.relative_humidity_2m + '%';
+    document.getElementById('pressure').textContent = Math.round(c.surface_pressure * 0.750062) + ' мм';
+}
+
+function renderHourly(data) {
+    const container = document.getElementById('hourly-scroll');
+    container.innerHTML = '';
+    const now = new Date();
+    const times = data.hourly.time;
+    const temps = data.hourly.temperature_2m;
+    const codes = data.hourly.weather_code;
+
+    let startIdx = times.findIndex(t => new Date(t) >= now);
+    if (startIdx === -1) startIdx = 0;
+
+    for (let i = startIdx; i < startIdx + 24 && i < times.length; i++) {
+        const d = new Date(times[i]);
+        const hourStr = d.getHours().toString().padStart(2, '0') + ':00';
+        const [icon] = weatherInfo(codes[i]);
+
+        const item = document.createElement('div');
+        item.className = 'hour-item';
+        item.innerHTML = `
+            <div class="hour-time">${i === startIdx ? 'Сейчас' : hourStr}</div>
+            <div class="hour-icon">${icon}</div>
+            <div class="hour-temp">${Math.round(temps[i])}°</div>
+        `;
+        container.appendChild(item);
+    }
+}
+
+function renderDaily(data) {
+    const container = document.getElementById('daily-list');
+    container.innerHTML = '';
+    const days = data.daily.time;
+    const codes = data.daily.weather_code;
+    const maxT = data.daily.temperature_2m_max;
+    const minT = data.daily.temperature_2m_min;
+
+    const dayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+
+    days.forEach((dayStr, i) => {
+        const d = new Date(dayStr);
+        const label = i === 0 ? 'Сегодня' : dayNames[d.getDay()];
+        const [icon] = weatherInfo(codes[i]);
+
+        const row = document.createElement('div');
+        row.className = 'day-row';
+        row.innerHTML = `
+            <div class="day-name">${label}</div>
+            <div class="day-icon">${icon}</div>
+            <div class="day-temps"><span class="max">${Math.round(maxT[i])}°</span><span class="min">${Math.round(minT[i])}°</span></div>
+        `;
+        container.appendChild(row);
+    });
+}
+
+function onDistrictChange() {
+    const key = document.getElementById('district-select').value;
+    const d = DISTRICTS[key];
+    fetchWeather(d.lat, d.lon, d.name, d.region);
+}
+
+// При загрузке страницы сразу показываем погоду в Ярославле
+fetchWeather(DISTRICTS.yaroslavl.lat, DISTRICTS.yaroslavl.lon, DISTRICTS.yaroslavl.name, DISTRICTS.yaroslavl.region);
+</script>
+
+</body>
+</html>
