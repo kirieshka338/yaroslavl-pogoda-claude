@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Погода</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; }
+
+    body {
+        background: linear-gradient(160deg, #4a6fa5, #2c3e6b 60%, #1a2540);
+        min-height: 100vh;
+        color: #fff;
+        padding: 16px;
+    }
+
+    #app {
+        max-width: 480px;
+        margin: 0 auto;
+    }
+
+    #search-bar {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+
+    #city-input {
+        flex: 1;
+        padding: 12px 16px;
+        border-radius: 12px;
+        border: none;
+        background: rgba(255,255,255,0.15);
+        color: #fff;
+        font-size: 15px;
+        outline: none;
+    }
+    #city-input::placeholder { color: rgba(255,255,255,0.6); }
+
+    #search-btn, #geo-btn {
+        padding: 12px 16px;
+        border-radius: 12px;
+        border: none;
+        background: rgba(255,255,255,0.2);
+        color: #fff;
+        font-size: 16px;
+        cursor: pointer;
+    }
+
+    #main-card {
+        background: rgba(255,255,255,0.1);
+        border-radius: 24px;
+        padding: 28px 20px;
+        text-align: center;
+        backdrop-filter: blur(10px);
+        margin-bottom: 16px;
+    }
+
+    #city-name {
+        font-size: 22px;
+        font-weight: 600;
+    }
+
+    #region-name {
+        font-size: 13px;
+        color: rgba(255,255,255,0.65);
+        margin-bottom: 12px;
+    }
+
+    #weather-icon {
+        font-size: 64px;
+        margin: 8px 0;
+    }
+
+    #temp {
+        font-size: 56px;
+        font-weight: 300;
+    }
+
+    #feels-like {
+        font-size: 14px;
+        color: rgba(255,255,255,0.7);
+        margin-top: 2px;
+    }
+
+    #condition {
+        font-size: 17px;
+        margin-top: 8px;
+    }
+
+    #details-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .detail-box {
+        background: rgba(255,255,255,0.08);
+        border-radius: 14px;
+        padding: 12px 6px;
+    }
+    .detail-label {
+        font-size: 11px;
+        color: rgba(255,255,255,0.6);
+        margin-bottom: 4px;
+    }
+    .detail-value {
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    #hourly-section, #daily-section {
+        background: rgba(255,255,255,0.1);
+        border-radius: 20px;
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+
+    .section-title {
+        font-size: 14px;
+        color: rgba(255,255,255,0.7);
+        margin-bottom: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    #hourly-scroll {
+        display: flex;
+        gap: 14px;
+        overflow-x: auto;
+        padding-bottom: 4px;
+    }
+
+    .hour-item {
+        flex-shrink: 0;
+        text-align: center;
+        min-width: 52px;
+    }
+    .hour-time { font-size: 12px; color: rgba(255,255,255,0.6); }
+    .hour-icon { font-size: 22px; margin: 6px 0; }
+    .hour-temp { font-size: 14px; font-weight: 600; }
+
+    .day-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .day-row:last-child { border-bottom: none; }
+    .day-name { font-size: 14px; width: 90px; }
+    .day-icon { font-size: 20px; width: 30px; text-align: center; }
+    .day-temps { font-size: 14px; }
+    .day-temps .max { font-weight: 600; }
+    .day-temps .min { color: rgba(255,255,255,0.55); margin-left: 6px; }
+
+    #status-msg {
+        text-align: center;
+        color: rgba(255,255,255,0.7);
+        font-size: 14px;
+        padding: 20px;
+    }
+
+    #attribution {
+        text-align: center;
+        font-size: 11px;
+        color: rgba(255,255,255,0.4);
+        margin-top: 8px;
+    }
+
+    .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div id="app">
+    <div id="search-bar">
+        <input type="text" id="city-input" placeholder="Город (например, Ярославль)">
+        <button id="search-btn" onclick="searchCity()">🔍</button>
+        <button id="geo-btn" onclick="useMyLocation()">📍</button>
+    </div>
+
+    <div id="status-msg">Загрузка погоды для Ярославля...</div>
+
+    <div id="content" class="hidden">
+        <div id="main-card">
+            <div id="city-name">—</div>
+            <div id="region-name">—</div>
+            <div id="weather-icon">☀️</div>
+            <div id="temp">—°</div>
+            <div id="feels-like">Ощущается как —°</div>
+            <div id="condition">—</div>
+
+            <div id="details-grid">
+                <div class="detail-box">
+                    <div class="detail-label">Ветер</div>
+                    <div class="detail-value" id="wind">—</div>
+                </div>
+                <div class="detail-box">
+                    <div class="detail-label">Влажность</div>
+                    <div class="detail-value" id="humidity">—</div>
+                </div>
+                <div class="detail-box">
+                    <div class="detail-label">Давление</div>
+                    <div class="detail-value" id="pressure">—</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="hourly-section">
+            <div class="section-title">Почасовой прогноз</div>
+            <div id="hourly-scroll"></div>
+        </div>
+
+        <div id="daily-section">
+            <div class="section-title">На неделю</div>
+            <div id="daily-list"></div>
+        </div>
+
+        <div id="attribution">Данные: Open-Meteo.com</div>
+    </div>
+</div>
+
+<script>
+// Ярославль по умолчанию (Ярославская область)
+const YAROSLAVL = { lat: 57.6261, lon: 39.8845, name: "Ярославль", region: "Ярославская область" };
+
+// Коды погоды Open-Meteo (WMO) -> иконка + текст на русском
+const WEATHER_CODES = {
+    0: ["☀️", "Ясно"],
+    1: ["🌤️", "Малооблачно"],
+    2: ["⛅", "Переменная облачность"],
+    3: ["☁️", "Пасмурно"],
+    45: ["🌫️", "Туман"],
+    48: ["🌫️", "Изморозь"],
+    51: ["🌦️", "Лёгкая морось"],
+    53: ["🌦️", "Морось"],
+    55: ["🌧️", "Сильная морось"],
+    56: ["🌧️", "Ледяная морось"],
+    57: ["🌧️", "Сильная ледяная морось"],
+    61: ["🌦️", "Небольшой дождь"],
+    63: ["🌧️", "Дождь"],
+    65: ["🌧️", "Сильный дождь"],
+    66: ["🌧️", "Ледяной дождь"],
+    67: ["🌧️", "Сильный ледяной дождь"],
+    71: ["🌨️", "Небольшой снег"],
+    73: ["🌨️", "Снег"],
+    75: ["❄️", "Сильный снег"],
+    77: ["❄️", "Снежные зёрна"],
+    80: ["🌦️", "Небольшой ливень"],
+    81: ["🌧️", "Ливень"],
+    82: ["⛈️", "Сильный ливень"],
+    85: ["🌨️", "Небольшой снегопад"],
+    86: ["❄️", "Снегопад"],
+    95: ["⛈️", "Гроза"],
+    96: ["⛈️", "Гроза с градом"],
+    99: ["⛈️", "Сильная гроза с градом"]
+};
+
+function weatherInfo(code) {
+    return WEATHER_CODES[code] || ["🌡️", "Неизвестно"];
+}
+
+function setStatus(text) {
+    const el = document.getElementById('status-msg');
+    el.textContent = text;
+    el.classList.remove('hidden');
+    document.getElementById('content').classList.add('hidden');
+}
+
+function showContent() {
+    document.getElementById('status-msg').classList.add('hidden');
+    document.getElementById('content').classList.remove('hidden');
+}
+
+async function fetchWeather(lat, lon, displayName, displayRegion) {
+    setStatus(`Загружаем погоду для ${displayName}...`);
+    try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+            `&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,surface_pressure` +
+            `&hourly=temperature_2m,weather_code` +
+            `&daily=weather_code,temperature_2m_max,temperature_2m_min` +
+            `&timezone=auto&forecast_days=7`;
+
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Ошибка запроса погоды');
+        const data = await res.json();
+
+        renderCurrent(data, displayName, displayRegion);
+        renderHourly(data);
+        renderDaily(data);
+        showContent();
+    } catch (err) {
+        console.error(err);
+        setStatus('Не удалось загрузить погоду 😔 Проверь интернет-соединение и попробуй снова.');
+    }
+}
+
+function renderCurrent(data, name, region) {
+    const c = data.current;
+    const [icon, text] = weatherInfo(c.weather_code);
+
+    document.getElementById('city-name').textContent = name;
+    document.getElementById('region-name').textContent = region || '';
+    document.getElementById('weather-icon').textContent = icon;
+    document.getElementById('temp').textContent = Math.round(c.temperature_2m) + '°';
+    document.getElementById('feels-like').textContent = `Ощущается как ${Math.round(c.apparent_temperature)}°`;
+    document.getElementById('condition').textContent = text;
+    document.getElementById('wind').textContent = Math.round(c.wind_speed_10m) + ' км/ч';
+    document.getElementById('humidity').textContent = c.relative_humidity_2m + '%';
+    document.getElementById('pressure').textContent = Math.round(c.surface_pressure * 0.750062) + ' мм';
+}
+
+function renderHourly(data) {
+    const container = document.getElementById('hourly-scroll');
+    container.innerHTML = '';
+    const now = new Date();
+    const times = data.hourly.time;
+    const temps = data.hourly.temperature_2m;
+    const codes = data.hourly.weather_code;
+
+    let startIdx = times.findIndex(t => new Date(t) >= now);
+    if (startIdx === -1) startIdx = 0;
+
+    for (let i = startIdx; i < startIdx + 24 && i < times.length; i++) {
+        const d = new Date(times[i]);
+        const hourStr = d.getHours().toString().padStart(2, '0') + ':00';
+        const [icon] = weatherInfo(codes[i]);
+
+        const item = document.createElement('div');
+        item.className = 'hour-item';
+        item.innerHTML = `
+            <div class="hour-time">${i === startIdx ? 'Сейчас' : hourStr}</div>
+            <div class="hour-icon">${icon}</div>
+            <div class="hour-temp">${Math.round(temps[i])}°</div>
+        `;
+        container.appendChild(item);
+    }
+}
+
+function renderDaily(data) {
+    const container = document.getElementById('daily-list');
+    container.innerHTML = '';
+    const days = data.daily.time;
+    const codes = data.daily.weather_code;
+    const maxT = data.daily.temperature_2m_max;
+    const minT = data.daily.temperature_2m_min;
+
+    const dayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+
+    days.forEach((dayStr, i) => {
+        const d = new Date(dayStr);
+        const label = i === 0 ? 'Сегодня' : dayNames[d.getDay()];
+        const [icon] = weatherInfo(codes[i]);
+
+        const row = document.createElement('div');
+        row.className = 'day-row';
+        row.innerHTML = `
+            <div class="day-name">${label}</div>
+            <div class="day-icon">${icon}</div>
+            <div class="day-temps"><span class="max">${Math.round(maxT[i])}°</span><span class="min">${Math.round(minT[i])}°</span></div>
+        `;
+        container.appendChild(row);
+    });
+}
+
+async function searchCity() {
+    const query = document.getElementById('city-input').value.trim();
+    if (!query) return;
+
+    setStatus(`Ищем город "${query}"...`);
+    try {
+        const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1&language=ru`;
+        const res = await fetch(geoUrl);
+        const data = await res.json();
+
+        if (!data.results || data.results.length === 0) {
+            setStatus(`Город "${query}" не найден 🤔 Попробуй другое название.`);
+            return;
+        }
+
+        const place = data.results[0];
+        const region = place.admin1 ? place.admin1 : place.country;
+        fetchWeather(place.latitude, place.longitude, place.name, region);
+    } catch (err) {
+        console.error(err);
+        setStatus('Ошибка поиска города. Попробуй ещё раз.');
+    }
+}
+
+function useMyLocation() {
+    if (!navigator.geolocation) {
+        setStatus('Геолокация не поддерживается этим браузером 😔');
+        return;
+    }
+    setStatus('Определяем твоё местоположение...');
+    navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+            const { latitude, longitude } = pos.coords;
+            // обратное геокодирование, чтобы узнать название города
+            try {
+                const revUrl = `https://geocoding-api.open-meteo.com/v1/search?latitude=${latitude}&longitude=${longitude}`;
+                // Open-Meteo geocoding не поддерживает reverse напрямую, поэтому просто покажем координаты как fallback
+            } catch (e) {}
+            fetchWeather(latitude, longitude, 'Моё местоположение', `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`);
+        },
+        (err) => {
+            console.error(err);
+            setStatus('Не удалось получить геолокацию 😔 Разреши доступ к местоположению в браузере, либо ищи город вручную.');
+        },
+        { timeout: 10000 }
+    );
+}
+
+document.getElementById('city-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') searchCity();
+});
+
+// При загрузке страницы сразу показываем погоду в Ярославле
+fetchWeather(YAROSLAVL.lat, YAROSLAVL.lon, YAROSLAVL.name, YAROSLAVL.region);
+</script>
+
+</body>
+</html>
